@@ -1,4 +1,5 @@
 from django.contrib.auth.models import User
+from django.contrib.auth.hashers import check_password
 from rest_framework import serializers
 
 class RegisterSerializer(serializers.ModelSerializer):
@@ -12,8 +13,18 @@ class RegisterSerializer(serializers.ModelSerializer):
         }
 
     def validate(self, data):
+        # Check if passwords match
         if data['password'] != data['password2']:
             raise serializers.ValidationError("Passwords do not match.")
+        
+        # Check if the combination of username and password already exists
+        try:
+            user = User.objects.get(username=data['username'])
+            if check_password(data['password'], user.password):
+                raise serializers.ValidationError("This username and password combination is already registered.")
+        except User.DoesNotExist:
+            pass  # If the user does not exist, continue with registration
+        
         return data
 
     def create(self, validated_data):
